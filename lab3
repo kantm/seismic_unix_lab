@@ -1,0 +1,56 @@
+#!/bin/bash
+# I/P file : farfield signature is provided as a segy  file "farfield.sgy" & "ntgather.su" is other I/P file
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp farfield.sgy ntgather.su lab3 Lab3_2018.pdf DOUBT -t /home/kantm/seismiclab/Viking_graben/lab3/input_files
+
+# sampling interval for the farfield wavelet is 1ms
+# verbose is just a bash-command telling in terminal what is done by each excuted command
+segyread tape=farfield.sgy verbose=1 | sushw key=dt a=1000 > farfield.su
+supswigb <farfield.su label1="Time (s)" label2="Trace" title="Farfield" perc=99 > farfield.ps
+# SUSHW - Set Header (one or more) Words using trace number, mod and 
+
+sufft < farfield.su | suamp mode=amp >farfield_fft.su
+supswigb <farfield_fft.su label1="Frequency (in Hz)" label2="Amplitude" title="FFT of Farfield" perc=99 > farfield_fft.ps
+# sufft : fft real time traces to complex frequency traces
+# suamp : output amp, phase, real or imag trace from
+# mode=amp: output amplitude traces
+
+# The farfield wavelet is sampled at 1 ms and the seismic data is sampled at 4 ms.
+# We should down_sample the farfield wavelet. 
+# But before we down_sample, we need to apply a low-pass filter (why? -> else frequency above nyquist will be folded back)
+sufilter < farfield.su f=90,110 amps=1,0 > farfield_filt.su
+supswigb <farfield_filt.su label1="Time (s)" label2="Trace" title="With Filter in Farfield" perc=99 > farfield_filt.ps
+# sufilter : applies a zero-phase, sine-squared tapered filter
+# f= array of filter frequency
+# amps= array of filter amplitudes
+
+sufft < farfield_filt.su | suamp mode=amp >farfield_filt_fft.su
+supswigb <farfield_filt_fft.su label1="Frequency (in Hz)" label2="Amplitude" title="FFT of Farfield with Filter applied" perc=99 > farfield_filt_fft.ps
+
+# have removed high frequencies, now ready to do down_sampling
+suresamp < farfield_filt.su dt=0.004 nt=150 > farfield_resamp.su
+
+# you might have observed that the far-field wavelet is not minimum phase
+# convert the wavelet into minimum phase
+suminphase < farfield_resamp.su sign2=-1 > farfield_minphs.su
+# The same filter should be applied to the data to convert it to minimum phase
+# This shaping operation is also called signature deconvolution (lets do it)
+
+sugain < ntgather.su agc=1 > agc_ntgather.su
+suchw < agc_ntgather.su >agc_ntg_hdrs1.su key1=tstat a=2 b=0 c=0 d=1
+sustatic <agc_ntg_hdrs1.su >stat_agc_ntgather.su hdrs=1
+
+sushape < stat_agc_ntgather.su wfile=farfield_resamp.su dfile=farfield_minphs.su showshaper=1 nshape=1500 2>shaper.asc > ntgather_minphs.su
+# sushape : wiener shaping filter
+# wfile : file containg input wavelet in SU(SEGY trace) format
+# dfile : file containing desired output wavelet in SU format
+# nshape : length of shaping filter
+# showshaper=1 : show shaping filter
+
+suacor < ntgather.su ntout=1001 > ntgather_acor.su
+supswigb <ntgather_acor.su label1="Time (s)" label2="Trace" title="auto correlation of NT gathers" f1=-2.0 perc=99 > ntgather_acor.ps
+# suacor : auto-correlation
+# ntout : number of time samples output
+# f1=-2.0 first sample in the fast dimension

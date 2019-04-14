@@ -1,0 +1,18 @@
+#!/bin/bash
+# I/P file=vikinggraben.su 
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp vikinggraben.su lab2 DOUBT lab2_2018.pdf -t /home/kantm/seismiclab/Viking_graben/lab2/input_files
+
+# select a particular shot and pick up the traveltimes of direct arrivals.
+suwind < vikinggraben.su key=ep min=101 max=101 | sugain agc=1 >ntgather.su
+supswigb <ntgather.su label1="Time (s)" title="Near trace gather, Viking Graben" perc=99 >ntgather.ps
+
+suxwigb < ntgather.su key=offset mpicks=data.txt
+# Muting the data
+#Use the cursor to pick mute values. Place the cursor over the figure and press “s” key to observe the value on the terminal
+awk '{print $1}' data.txt > xdata.txt
+awk '{print $2}' data.txt > tdata.txt
+sumute < vikinggraben.su tfile=tdata.txt xfile=xdata.txt key=offset > mute_vikinggraben.su
+supswigb <mute_vikinggraben.su label1="Time (s)" title="Muted, Viking Graben" perc=99 >mute_vikinggraben.ps

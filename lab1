@@ -1,0 +1,31 @@
+#!/bin/bash
+# I/p File = vikinggraben.segy
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp vikinggraben.segy lab1 DOUBT Lab1_2018.pdf -t /home/kantm/seismiclab/Viking_graben/lab1/input_files
+
+# Reading SEG-Y data
+segyread tape=vikinggraben.segy hfile=vikinggraben_ebcdic_hdr bfile=vikinggraben_bin_hdr >vikinggraben.su
+
+# Now convert ebcdic header to ascii
+dd if=vikinggraben_ebcdic_hdr of=vikinggraben_ebcdic conv=ascii
+# can see the content of vikinggraben_ebcdic_hdr in a text editor
+
+#Stripping away trace headers
+sustrip < vikinggraben.su head=vikinggraben_trace_hdrs > vikinggraben.bin
+
+# put headers values (sx,gx,sy,gy,offset,cdp) in a file(here asciihdrs_VG.asc)
+sugethw < vikinggraben.su key=sx,gx,sy,gy,offset,cdp output=geom >asciihdrs_VG.asc
+
+# Sorting data : Sort the data with increasing cdp and offset
+susort < vikinggraben.su cdp offset > cdpsorted_VG.su
+
+# Viewing and Windowing data
+# to view use suxwigb, suximage....
+suwind < cdpsorted_VG.su key=cdp min=101 max=105 > 5cdp.su
+supswigb < 5cdp.su label1="Time (s)" label2="CDP" title="5 CDP gather" perc=99 > 5cdp.ps
+
+# create the “near trace gather”
+suwind <cdpsorted_VG.su key=offset min=-262 max=-262 > ntgather.su
+supswigb < ntgather.su label1="Time (s)" title="Near trace gather, Viking Graben" perc=99 >ntgather.ps

@@ -1,0 +1,7 @@
+#!/bin/bash
+# I/P file : farfield signature is provided as a segy  file "farfield.sgy" & "ntgather.su" is other I/P file
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp Clean.sh Makefile minphs_pred_decon.sh traces.c lab4 Lab4_2018.pdf DOUBT -t /home/kantm/seismiclab/Viking_graben/lab4/input_files
+
