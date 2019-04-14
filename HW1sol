@@ -1,0 +1,43 @@
+#!/bin/bash
+# I/P file = cdpsorted_VG.su
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp cdpsorted_VG.su HW1sol Hw1_2018.pdf DOUBT-t /home/kantm/seismiclab/Viking_graben/HW1/input_files
+
+# To produce near trace gather, use suwind to window all traces with the nearest offset
+# Get min. offset using $ surange < cdpsorted_VG.su
+suwind <cdpsorted_VG.su key=offset min=-262 max=-262 >ntgather.su
+# fixed offset 262m
+
+# To produce the post-script file
+supswigb < ntgather.su label1="Time (s)" label2="" title="Near trace gather, Viking Graben" perc=99 >ntgather.ps
+
+#  Extracting any 3 CDP gathers with maximum fold and ploting them & saving figure
+suwind <cdpsorted_VG.su key=cdp min=450 max=452 >3cdp.su
+supswigb <3cdp.su key=tracl perc=99 label1="Time (s)" label2="Trace Number" title="before_gain(CDP number=450-452)" >3cdp.ps
+
+# Apply the gain functions tpow=2 & agc with diffn windowing
+# tpow=2 gain on ntgather
+sugain <ntgather.su tpow=2 >t2_ntgather.su
+supswigb <t2_ntgather.su key=tracl label1="Time(s)" label2="Trace Number" title="t^2 gain, near tracegather(VG)" >t2_ntgather.ps
+
+# tpow=2 gain on 3cdp.su
+sugain <3cdp.su tpow=2 >t2_3cdp.su
+supswigb <t2_3cdp.su key=tracl label1="Time(s)" label2="Trace Number" title="t^2 gain, cdp=450=452" >t2_3cdp.ps
+
+# AGC gain with window_agc=.75 on ntgather.su
+sugain <ntgather.su agc=1 wagc=0.75 >agc75_ntg.su
+supswigb <agc75_ntg.su key=cdp perc=99 label1="Time (s)" label2="CDP" title="AGC (wagc=0.75s), Near trace gather" >agc75_ntg.ps
+
+# AGC gain with window_agc=1 on ntgather.su
+sugain <ntgather.su agc=1 wagc=1 >agc1_ntg.su
+supswigb <agc1_ntg.su key=cdp perc=99 label1="Time (s)" label2="CDP" title="AGC (wagc=1s), Near trace gather" >agc1_ntg.ps
+
+# AGC gain with window_agc=.75 on 3cdp.su
+sugain <3cdp.su agc=1 wagc=0.75 >agc75_3cdp.su
+supswigb <agc75_3cdp.su key=trcl perc=99 label1="Time (s)" label2="Trace Number" title="AGC (wagc=0.75s), CDP 450-452" >agc75_3cdp.ps
+
+# AGC gain with window_agc=1 on 3cdp.su
+sugain <3cdp.su agc=1 wagc=1 >agc1_3cdp.su
+supswigb <agc1_3cdp.su key=trcl perc=99 label1="Time (s)" label2="Trace Number" title="AGC (wagc=1s), CDP 450-452" >agc1_3cdp.ps

@@ -1,0 +1,45 @@
+#!/bin/bash
+# I/P file = stat_t2_3cdphdrs0.su & stat_t2_ntgatherhdrs0.su & farfield.su
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp HW3sol Hw3_2018.pdf stat_t2_3cdphdrs0.su stat_t2_ntgatherhdrs0.su DOUBT -t /home/kantm/seismiclab/Viking_graben/HW3/input_files
+
+# autocorrelation of gained and statics corrected near trace gather
+suacor < stat_t2_ntgatherhdrs0.su ntout=1001 > ACOR_ntg.su
+supsimage <ACOR_ntg.su label1="Lag (s)" label2="Trace" title="autocorrelation of gained near trace gather" perc=99 > ACOR_ntg.ps
+# ntout=101	odd number of time samples output
+
+# autocorrelation of gained and statics corrected 3 CDP gathers
+suacor < stat_t2_3cdphdrs0.su ntout=1001 > ACOR_3cdp.su
+supswigb <ACOR_3cdp.su label1="Lag (s)" label2="Trace" title="autocorrelation of gained 3 CDP gather" perc=99 > ACOR_3cdp.ps
+
+# Get the filter which converted the input file in the desired format in the ascii format
+sufilter < farfield.su f=90,110 amps=1,0 >filt_farfield.su
+suresamp < filt_farfield.su dt=0.004 nt=150 > resamp_farfield.su
+suminphase < resamp_farfield.su sign2=-1 > minphs_farfield.su
+
+# Sushape is a weinner shaping filter.
+# It takes a file containing input wavelet (wfile) in SU format, file containing desired output format (dfile) in SU format
+# and gives the output file in SU format after shaping the input file. 
+sushape <stat_t2_ntgatherhdrs0.su wfile=resamp_farfield.su dfile=minphs_farfield.su showshaper=1 nshape=1500 2>shaper.asc >minphs_ntgather.su 
+
+#Comparison of ntg before and after minimum phasing in time domain
+supsimage < stat_t2_ntgatherhdrs0.su label1="time" label2="trace" title="ntg before minimum phase gather in time domain" > T_domain_ntgBEFORE_minphase.ps
+supsimage < minphs_ntgather.su label1="time" label2="trace" title="ntg after minimum phase gather in time domain" > T_domain_ntgAFTER_minphase.ps
+
+# Comparison of ntg before and after minimum phasing in frequency domain
+sufft < stat_t2_ntgatherhdrs0.su | suamp mode=amp| supsimage label1="frequency" label2="trace" title="ntg before minimum phase in frequency domain" perc=99 > F_domain_ntgBEFORE_minphase.ps
+sufft < minphs_ntgather.su | suamp mode=amp| supsimage label1="frequency" label2="trace" title="ntg after minimum phase in frequency domain" perc=99 > F_domain_ntgAFTER_minphase.ps
+
+# Comparing the min. phased wavelet with the resampled wavelet in time domain
+supswigb < minphs_farfield.su label1="time" label2="trace" title="minimum phase farfield" > Min_Phase_farfield.ps
+supswigb < resamp_farfield.su label1="time" label2="trace" title="resampled farfield" > Resamp_farfield.ps
+
+# Comparing the minphased wavelet with the resampled wavelet in frequency domain for amplitude spectrum
+sufft <minphs_farfield.su |suamp mode=amp |supswigb label1="frequency" label2="trace" title="farfield min phase in frequency domain" > F_domainAMPspec_minPhas_Farfield.ps
+sufft <resamp_farfield.su |suamp mode=amp |supswigb label1="frequency" label2="trace" title="farfield resampled in frequency domain" > F_domainAMPspec_resamp_Farfield.ps
+
+# For phase spectrum
+sufft <minphs_farfield.su |suamp mode=phase |supswigb label1="frequency" label2="Degree" title="farfield min phase phase spectrum" > F_domainPHASEspec_minPhas_Farfield.ps
+sufft <resamp_farfield.su |suamp mode=phase |supswigb label1="frequency" label2="Degree" title="farfield resampled phase spectrum" > F_domainPHASEspec_resamp_Farfield.ps

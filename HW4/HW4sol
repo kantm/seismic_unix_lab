@@ -1,0 +1,6 @@
+#!/bin/bash
+# I/P file : Clean.sh Makefile minphs_pred_decon.sh traces.c HW4sol Hw4_2018.pdf DOUBT
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp Clean.sh Makefile minphs_pred_decon.sh traces.c HW4sol Hw4_2018.pdf DOUBT -t /home/kantm/seismiclab/Viking_graben/HW4/input_files

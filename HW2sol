@@ -1,0 +1,43 @@
+#!/bin/bash
+# I/P file = 3cdp.su & ntgather.su
+
+# copying all inputs file in input_files directory
+test -d input_files || mkdir input_files
+cp 3cdp.su ntgather.su HW2sol Hw2_2018.pdf DOUBT -t /home/kantm/seismiclab/Viking_graben/HW2/input_files
+
+# applying NMO to 3 CDP gathers with max fold at Vnmo=1500m/s
+sunmo < 3cdp.su > 3cdpNMO1500.su vnmo=1500
+# ploting the NMO corrected 3 CDP gather & converting the o/p to a postscript file
+supswigb <3cdpNMO1500.su label1="Time (s)" label2="Trace" title="3cdp gather with Vnmo=1500 " perc=99 > NMO1500.ps
+# label1 = Y-axis, label2 = X-axis
+
+# applying NMO to 3 CDP gathers with max fold at Vnmo=1470m/s
+sunmo < 3cdp.su > 3cdpNMO1470.su vnmo=1470
+supswigb <3cdpNMO1470.su label1="Time (s)" label2="Trace" title="3cdp gather with Vnmo=1470 " perc=99 > NMO1470.ps
+
+# applying NMO to 3 CDP gathers with max fold at Vnmo=1440m/s
+sunmo < 3cdp.su > 3cdpNMO1440.su vnmo=1440
+supswigb <3cdpNMO1440.su label1="Time (s)" label2="Trace" title="3cdp gather with Vnmo=1440 " perc=99 > NMO1440.ps
+
+# APPLYING t sq. GAIN On Near Trace gather
+sugain <ntgather.su  tpow=2 >t2_ntgather.su
+
+# Applying t sq. gain on 3cdp gather
+sugain <3cdp.su tpow=2 >t2_3cdp.su 
+
+# Add header Word (sdepth=-6) (swevel=1)(wevel=1440)in o/p file updated_t2_ntgather.su
+# can see the added hdrs using surange <updated_t2_ntgather.su
+suchw <t2_ntgather.su key1=sdepth a=-6 b=0 c=0 d=1|suchw key1=swevel a=1 b=0 c=0 d=1 |suchw key1=wevel a=1440 b=0 c=0 d=1 >updated_t2_ntgather.su
+suchw <t2_3cdp.su key1=sdepth a=-6 b=0 c=0 d=1|suchw key1=swevel a=1 b=0 c=0 d=1 |suchw key1=wevel a=1440 b=0 c=0 d=1 >updated_t2_3cdp.su
+
+# perform static correction using sustatic// see sudoc sustatic for detail
+# for hdrs=0, statics calculation is performed using a formula available at sudoc sustatic
+sustatic <updated_t2_ntgather.su >stat_t2_ntgatherhdrs0.su hdrs=0
+sustatic <updated_t2_3cdp.su >stat_t2_3cdphdrs0.su hdrs=0
+
+# for hdrs=1 statics calculation is not performed, statics correction is applied to the data by reading total statics (tstat in ms) from the header.
+# So we need to update the header
+suchw <updated_t2_ntgather.su >ntg_hdrs1.su key1=tstat a=2 b=0 c=0 d=1
+sustatic <ntg_hdrs1.su >stat_t2_ntghdrs1.su hdrs=1
+suchw <updated_t2_3cdp.su >3cdp_hdrs1.su key1=tstat a=2 b=0 c=0 d=1
+sustatic <3cdp_hdrs1.su >stat_t2_3cdphdrs1.su hdrs=1
